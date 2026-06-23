@@ -29,7 +29,7 @@ const PaywallPage = () => {
     const sessionId = getOrCreateSessionId()
     const anonymousId = getOrCreateAnonymousId()
     const userId = sessionStorage.getItem('funnel_user_id') ?? undefined
-    if (userId) saveFunnelProgress({ step: 'paywall', userId })
+    saveFunnelProgress({ step: 'paywall' })
     apiTrackEvent({ step: 'paywall_view', session_id: sessionId, anonymous_id: anonymousId, user_id: userId, ...utm })
   }, [ready, router])
 

@@ -55,7 +55,7 @@ export function getOrCreateAnonymousId(): string {
   return aid
 }
 
-export type FunnelProgress = { step: 'email' } | { step: 'paywall'; userId: string }
+export type FunnelProgress = { step: 'email' } | { step: 'paywall' }
 
 export function saveFunnelProgress(progress: FunnelProgress) {
   if (typeof window === 'undefined') return
