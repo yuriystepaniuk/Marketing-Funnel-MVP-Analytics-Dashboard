@@ -32,7 +32,7 @@ export const useEmailCapture = () => {
     if (result.purchased) {
       router.push('/product')
     } else {
-      router.push('/paywall')
+      router.push(result.isNew === false ? '/paywall?resumed=true' : '/paywall')
     }
   }
 

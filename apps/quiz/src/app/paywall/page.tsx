@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { loadUtm, getOrCreateSessionId, getOrCreateAnonymousId, saveFunnelProgress, clearFunnelProgress } from '@/lib/funnel'
 import { apiTrackEvent } from '@/lib/api'
 import { useCrud } from '@/hooks/useCrud'
@@ -9,6 +10,7 @@ import { PAYWALL_FEATURES } from '@/features/funnel/constants'
 
 const PaywallPage = () => {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { execute: trackBuy, loading } = useCrud(apiTrackEvent)
   const [ready] = useState(() =>
     typeof window !== 'undefined' && !!sessionStorage.getItem('funnel_user_id')
@@ -16,6 +18,7 @@ const PaywallPage = () => {
   const [userEmail] = useState(() =>
     typeof window !== 'undefined' ? sessionStorage.getItem('funnel_user_email') ?? '' : ''
   )
+  const resumed = searchParams.get('resumed') === 'true'
 
   useEffect(() => {
     if (!ready) {
@@ -60,6 +63,11 @@ const PaywallPage = () => {
             Unlock Your Growth Plan
           </h1>
           <p className="text-indigo-200 text-sm">Everything you need to grow faster.</p>
+          {resumed && (
+            <div className="mt-4 bg-white/15 backdrop-blur-sm text-white text-sm px-4 py-2.5 rounded-xl">
+              You're one step away — complete your purchase to get access.
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-3xl shadow-2xl shadow-indigo-900/30 overflow-hidden">
