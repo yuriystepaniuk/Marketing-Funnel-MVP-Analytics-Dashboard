@@ -9,7 +9,8 @@ import type { FunnelProgress } from '@/lib/funnel'
 const QuizStart = () => {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [progress, setProgress] = useState<FunnelProgress | null>(() => loadFunnelProgress())
+  const [progress] = useState<FunnelProgress | null>(() => loadFunnelProgress())
+  const [startingFresh, setStartingFresh] = useState(false)
 
   useEffect(() => {
     const utm = getUtmFromSearch(searchParams.toString())
@@ -32,8 +33,8 @@ const QuizStart = () => {
   }
 
   const handleStartFresh = () => {
+    setStartingFresh(true)
     clearFunnelProgress()
-    setProgress(null)
     const utm = getUtmFromSearch(searchParams.toString())
     saveUtm(utm)
     const sessionId = resetSessionId()
@@ -76,9 +77,10 @@ const QuizStart = () => {
             </button>
             <button
               onClick={handleStartFresh}
-              className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-8 rounded-2xl text-base transition-all"
+              disabled={startingFresh}
+              className="w-full bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white font-semibold py-3 px-8 rounded-2xl text-base transition-all"
             >
-              Start over
+              {startingFresh ? 'Loading...' : 'Start over'}
             </button>
           </div>
         ) : (
