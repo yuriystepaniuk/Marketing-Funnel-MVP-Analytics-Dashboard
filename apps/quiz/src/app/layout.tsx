@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Marketing Growth Quiz",
   description: "Discover your marketing superpower and get a personalised action plan.",
+  openGraph: {
+    title: "Marketing Growth Quiz",
+    description: "Discover your marketing superpower and get a personalised action plan.",
+  },
 };
 
 export default function RootLayout({

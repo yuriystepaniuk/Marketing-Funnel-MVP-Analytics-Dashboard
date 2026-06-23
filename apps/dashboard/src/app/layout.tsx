@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Funnel Dashboard",
   description: "Marketing funnel analytics and attribution dashboard.",
+  openGraph: {
+    title: "Funnel Dashboard",
+    description: "Marketing funnel analytics and attribution dashboard.",
+  },
 };
 
 export default function RootLayout({
