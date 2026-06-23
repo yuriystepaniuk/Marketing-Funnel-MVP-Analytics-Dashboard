@@ -20,7 +20,7 @@ const QuizStart = () => {
     const userId = sessionStorage.getItem('funnel_user_id') ?? undefined
     const utmKey = JSON.stringify(utm)
     const lastTracked = sessionStorage.getItem('funnel_last_tracked_utm')
-    if (!existing || (utm.source !== 'direct' && lastTracked !== utmKey)) {
+    if (!existing || lastTracked !== utmKey) {
       sessionStorage.setItem('funnel_last_tracked_utm', utmKey)
       apiTrackEvent({ step: 'quiz_start', session_id: sessionId, anonymous_id: anonymousId, user_id: userId, ...utm })
     }
