@@ -1,18 +1,25 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useDashboard } from '@/hooks/useDashboard'
-import LoginForm from '@/features/dashboard/components/LoginForm'
 import DashboardView from '@/features/dashboard/components/DashboardView'
 import Spinner from '@/features/dashboard/components/Spinner'
 
-const DashboardPage = () => {
-  const { token, login, logout } = useDashboard()
+export default function DashboardPage() {
+  const { token, logout } = useDashboard()
+  const router = useRouter()
 
-  if (token === null) return <Spinner />
+  useEffect(() => {
+    if (token === '') router.replace('/login')
+  }, [token, router])
 
-  return !token
-    ? <LoginForm onSuccess={login} />
-    : <DashboardView token={token} onLogout={logout} />
+  if (!token) return <Spinner />
+
+  const handleLogout = () => {
+    logout()
+    router.replace('/login')
+  }
+
+  return <DashboardView token={token} onLogout={handleLogout} />
 }
-
-export default DashboardPage
