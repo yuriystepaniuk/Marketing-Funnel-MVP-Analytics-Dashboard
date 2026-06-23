@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { HttpStatus } from '@/lib/httpStatus'
-import { rateLimit } from '@/lib/rateLimit'
+import { rateLimit, getClientIp } from '@/lib/rateLimit'
+import { generateToken } from '@/lib/token'
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for') ?? 'unknown'
+  const ip = getClientIp(req)
   if (!rateLimit(ip, 5, 60_000)) {
     return NextResponse.json({ error: 'Too many requests' }, { status: HttpStatus.TOO_MANY_REQUESTS })
   }
@@ -12,11 +13,11 @@ export async function POST(req: NextRequest) {
 
   const validUser = process.env.DASHBOARD_ADMIN_USER
   const validPass = process.env.DASHBOARD_ADMIN_PASSWORD
-  const token = process.env.DASHBOARD_SECRET
+  const secret = process.env.DASHBOARD_SECRET
 
-  if (!username || !password || username !== validUser || password !== validPass) {
+  if (!username || !password || !secret || username !== validUser || password !== validPass) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: HttpStatus.UNAUTHORIZED })
   }
 
-  return NextResponse.json({ token })
+  return NextResponse.json({ token: generateToken(secret) })
 }

@@ -1,78 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseServer } from '@/lib/supabase'
 import { HttpStatus } from '@/lib/httpStatus'
-import { rateLimit } from '@/lib/rateLimit'
-import { STEPS } from '@/features/dashboard/constants'
+import { rateLimit, getClientIp } from '@/lib/rateLimit'
+import { verifyToken } from '@/lib/token'
 
 const PAGE_SIZE = 50
+const FALLBACK_ID = '00000000-0000-0000-0000-000000000000'
 
 export async function GET(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for') ?? 'unknown'
+  const ip = getClientIp(req)
   if (!rateLimit(ip, 30, 60_000)) {
     return NextResponse.json({ error: 'Too many requests' }, { status: HttpStatus.TOO_MANY_REQUESTS })
   }
 
-  const authHeader = req.headers.get('authorization')
-  const expectedToken = process.env.DASHBOARD_SECRET
+  const authHeader = req.headers.get('authorization') ?? ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+  const secret = process.env.DASHBOARD_SECRET
 
-  if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
+  if (!secret || !verifyToken(token, secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: HttpStatus.UNAUTHORIZED })
   }
 
   const page = Math.max(1, Number(req.nextUrl.searchParams.get('page') ?? '1'))
   const from = (page - 1) * PAGE_SIZE
 
-  const { data: allEvents } = await supabaseAdmin
-    .from('events')
-    .select('step, session_id, user_id, source')
+  const [
+    { data: funnelData },
+    { data: sourceData },
+    { data: users, count: totalUsers },
+  ] = await Promise.all([
+    supabaseServer.rpc('get_funnel_counts'),
+    supabaseServer.rpc('get_source_breakdown'),
+    supabaseServer
+      .from('users')
+      .select('id, email, first_touch_source, first_touch_utm_campaign, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1),
+  ])
 
-  // use user_id when available (post-email steps), session_id for quiz_start
-  const dedupeKey = (e: { step: string; session_id: string; user_id: string | null }) =>
-    e.user_id ?? e.session_id
-
-  const counts: Record<string, number> = {}
-  for (const step of STEPS) {
-    const unique = new Set(
-      allEvents?.filter((e) => e.step === step).map(dedupeKey)
-    )
-    counts[step] = unique.size
-  }
-
-  // first-touch source per unique key — prevents one session inflating multiple source rows
-  const sessionFirstSource: Record<string, string> = {}
-  for (const row of allEvents ?? []) {
-    const key = dedupeKey(row)
-    if (!sessionFirstSource[key]) sessionFirstSource[key] = row.source
-  }
-
-  const sourceBreakdown: Record<string, Record<string, number>> = {}
-  const sourceSessions: Record<string, Record<string, Set<string>>> = {}
-  for (const row of allEvents ?? []) {
-    const key = dedupeKey(row)
-    const source = sessionFirstSource[key]
-    if (!sourceSessions[source]) sourceSessions[source] = {}
-    if (!sourceSessions[source][row.step]) sourceSessions[source][row.step] = new Set()
-    sourceSessions[source][row.step].add(key)
-  }
-  for (const source of Object.keys(sourceSessions)) {
-    sourceBreakdown[source] = {}
-    for (const step of Object.keys(sourceSessions[source])) {
-      sourceBreakdown[source][step] = sourceSessions[source][step].size
-    }
-  }
-
-  const { data: users, count: totalUsers } = await supabaseAdmin
-    .from('users')
-    .select('id, email, first_touch_source, first_touch_utm_campaign, created_at', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(from, from + PAGE_SIZE - 1)
+  const counts = (funnelData as Record<string, number> | null) ?? {}
+  const sourceBreakdown = (sourceData as Record<string, Record<string, number>> | null) ?? {}
 
   const userIds = (users ?? []).map((u) => u.id)
-  const { data: lastEvents } = await supabaseAdmin
-    .from('events')
-    .select('user_id, source, created_at')
-    .in('user_id', userIds.length > 0 ? userIds : ['00000000-0000-0000-0000-000000000000'])
-    .order('created_at', { ascending: false })
+  const ids = userIds.length > 0 ? userIds : [FALLBACK_ID]
+
+  const [{ data: lastEvents }, { data: buyEvents }] = await Promise.all([
+    supabaseServer
+      .from('events')
+      .select('user_id, source, created_at')
+      .in('user_id', ids)
+      .order('created_at', { ascending: false }),
+    supabaseServer
+      .from('events')
+      .select('user_id')
+      .in('user_id', ids)
+      .eq('step', 'buy_click'),
+  ])
 
   const lastTouchMap: Record<string, { source: string; created_at: string }> = {}
   for (const evt of lastEvents ?? []) {
@@ -81,9 +64,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const purchasedUserIds = new Set(
-    (allEvents ?? []).filter(e => e.step === 'buy_click' && e.user_id).map(e => e.user_id!)
-  )
+  const purchasedUserIds = new Set((buyEvents ?? []).map((e) => e.user_id))
 
   const attribution = (users ?? []).map((u) => ({
     id: u.id,

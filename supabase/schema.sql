@@ -41,3 +41,39 @@ drop policy if exists "allow_all_events" on public.events;
 
 create policy "allow_all_users" on public.users for all using (true) with check (true);
 create policy "allow_all_events" on public.events for all using (true) with check (true);
+
+-- Funnel counts: deduped by user_id (post-email) or session_id (anonymous)
+create or replace function get_funnel_counts()
+returns json language sql security definer as $$
+  select coalesce(json_object_agg(step, cnt), '{}'::json) from (
+    select step, count(distinct coalesce(user_id::text, session_id)) as cnt
+    from public.events
+    group by step
+  ) t;
+$$;
+
+-- Source breakdown: first-touch source per session, grouped by (source, step)
+create or replace function get_source_breakdown()
+returns json language sql security definer as $$
+  with first_source as (
+    select distinct on (coalesce(user_id::text, session_id))
+      coalesce(user_id::text, session_id) as key,
+      source
+    from public.events
+    order by coalesce(user_id::text, session_id), created_at
+  ),
+  counts as (
+    select
+      fs.source,
+      e.step,
+      count(distinct coalesce(e.user_id::text, e.session_id)) as cnt
+    from public.events e
+    join first_source fs on coalesce(e.user_id::text, e.session_id) = fs.key
+    group by fs.source, e.step
+  )
+  select coalesce(json_object_agg(source, steps), '{}'::json) from (
+    select source, json_object_agg(step, cnt) as steps
+    from counts
+    group by source
+  ) t;
+$$;

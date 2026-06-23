@@ -1,30 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseServer } from '@/lib/supabase'
 import { validateEmail } from '@/features/funnel/helpers'
-import { rateLimit } from '@/lib/rateLimit'
+import { rateLimit, getClientIp } from '@/lib/rateLimit'
 import { HttpStatus } from '@/lib/httpStatus'
 
+const sanitize = (v: unknown): string | null =>
+  typeof v === 'string' ? v.trim().slice(0, 255) || null : null
+
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for') ?? 'unknown'
+  const ip = getClientIp(req)
   if (!rateLimit(ip, 10, 60_000)) {
     return NextResponse.json({ error: 'Too many requests' }, { status: HttpStatus.TOO_MANY_REQUESTS })
   }
 
   const body = await req.json()
-  const { email, anonymous_id, source = 'direct', utm_campaign, utm_medium } = body
+  const { email, anonymous_id, source, utm_campaign, utm_medium } = body
 
   if (!email || !validateEmail(email)) {
-    return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid email' }, { status: HttpStatus.BAD_REQUEST })
   }
 
-  const { data: existing } = await supabaseAdmin
+  const normalizedEmail = email.toLowerCase().trim()
+
+  const { data: existing } = await supabaseServer
     .from('users')
     .select('id, email, first_touch_source')
-    .eq('email', email.toLowerCase().trim())
+    .eq('email', normalizedEmail)
     .single()
 
   if (existing) {
-    const { count } = await supabaseAdmin
+    const { count } = await supabaseServer
       .from('events')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', existing.id)
@@ -32,19 +37,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ user: existing, isNew: false, purchased: (count ?? 0) > 0 })
   }
 
-  const { data: newUser, error } = await supabaseAdmin
+  const { data: newUser, error } = await supabaseServer
     .from('users')
     .insert({
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       anonymous_id: anonymous_id || null,
-      first_touch_source: source,
-      first_touch_utm_campaign: utm_campaign || null,
-      first_touch_utm_medium: utm_medium || null,
+      first_touch_source: sanitize(source) ?? 'direct',
+      first_touch_utm_campaign: sanitize(utm_campaign),
+      first_touch_utm_medium: sanitize(utm_medium),
     })
     .select()
     .single()
 
   if (error) {
+    // 23505 = unique_violation: race condition — another request created this user first
+    if (error.code === '23505') {
+      const { data: raceUser } = await supabaseServer
+        .from('users')
+        .select('id, email, first_touch_source')
+        .eq('email', normalizedEmail)
+        .single()
+      if (raceUser) {
+        return NextResponse.json({ user: raceUser, isNew: false, purchased: false })
+      }
+    }
     console.error('Error creating user:', error)
     return NextResponse.json({ error: 'Failed to create user' }, { status: HttpStatus.SERVER_ERROR })
   }

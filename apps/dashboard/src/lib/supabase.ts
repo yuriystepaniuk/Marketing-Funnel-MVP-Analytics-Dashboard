@@ -5,4 +5,4 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 
 // Server-side client used only in API routes (never sent to browser)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseKey)
+export const supabaseServer = createClient(supabaseUrl, supabaseKey)
