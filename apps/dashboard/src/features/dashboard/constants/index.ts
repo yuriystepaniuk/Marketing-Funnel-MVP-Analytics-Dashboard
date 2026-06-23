@@ -1,9 +1,9 @@
-export const STEPS = ['quiz_start', 'email_captured', 'paywall_view', 'buy_click'] as const
+export const STEPS = ['quiz_start', 'email_view', 'paywall_view', 'buy_click'] as const
 export type FunnelStep = (typeof STEPS)[number]
 
 export const STEP_LABELS: Record<string, string> = {
   quiz_start: 'Quiz View',
-  email_captured: 'Email View',
+  email_view: 'Email View',
   paywall_view: 'Paywall View',
   buy_click: 'Buy Click',
 }

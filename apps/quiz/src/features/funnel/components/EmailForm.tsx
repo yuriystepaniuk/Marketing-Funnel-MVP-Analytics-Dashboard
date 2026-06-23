@@ -24,7 +24,7 @@ const EmailForm = () => {
     if (searchParams.toString()) saveUtm(utm)
     const sessionId = getOrCreateSessionId()
     const anonymousId = getOrCreateAnonymousId()
-    apiTrackEvent({ step: 'email_captured', session_id: sessionId, anonymous_id: anonymousId, ...utm })
+    apiTrackEvent({ step: 'email_view', session_id: sessionId, anonymous_id: anonymousId, ...utm })
   }, [ready, router, searchParams])
 
   if (!ready) return null

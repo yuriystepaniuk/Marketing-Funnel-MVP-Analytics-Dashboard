@@ -103,10 +103,10 @@ export async function GET(req: NextRequest) {
         ? ((counts['buy_click'] / counts['quiz_start']) * 100).toFixed(1)
         : '0',
       start_to_email: counts['quiz_start']
-        ? ((counts['email_captured'] / counts['quiz_start']) * 100).toFixed(1)
+        ? ((counts['email_view'] / counts['quiz_start']) * 100).toFixed(1)
         : '0',
-      email_to_paywall: counts['email_captured']
-        ? ((counts['paywall_view'] / counts['email_captured']) * 100).toFixed(1)
+      email_to_paywall: counts['email_view']
+        ? ((counts['paywall_view'] / counts['email_view']) * 100).toFixed(1)
         : '0',
       paywall_to_buy: counts['paywall_view']
         ? ((counts['buy_click'] / counts['paywall_view']) * 100).toFixed(1)

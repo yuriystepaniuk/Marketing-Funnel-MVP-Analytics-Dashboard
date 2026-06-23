@@ -15,7 +15,7 @@ create table if not exists public.events (
   user_id uuid references public.users(id) on delete cascade,
   session_id text not null,
   anonymous_id text,
-  step text not null check (step in ('quiz_start', 'email_captured', 'paywall_view', 'buy_click')),
+  step text not null check (step in ('quiz_start', 'email_view', 'paywall_view', 'buy_click')),
   source text not null default 'direct',
   utm_campaign text,
   utm_medium text,
