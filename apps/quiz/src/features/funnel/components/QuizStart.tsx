@@ -17,8 +17,12 @@ const QuizStart = () => {
     const existing = sessionStorage.getItem('funnel_session_id')
     const sessionId = existing ? getOrCreateSessionId() : resetSessionId()
     const anonymousId = getOrCreateAnonymousId()
-    if (!existing) {
-      apiTrackEvent({ step: 'quiz_start', session_id: sessionId, anonymous_id: anonymousId, ...utm })
+    const userId = sessionStorage.getItem('funnel_user_id') ?? undefined
+    const utmKey = JSON.stringify(utm)
+    const lastTracked = sessionStorage.getItem('funnel_last_tracked_utm')
+    if (!existing || (utm.source !== 'direct' && lastTracked !== utmKey)) {
+      sessionStorage.setItem('funnel_last_tracked_utm', utmKey)
+      apiTrackEvent({ step: 'quiz_start', session_id: sessionId, anonymous_id: anonymousId, user_id: userId, ...utm })
     }
   }, [searchParams])
 
