@@ -27,7 +27,16 @@ const QuizStart = () => {
     }
   }, [searchParams])
 
+  const trackCta = () => {
+    const utm = getUtmFromSearch(searchParams.toString())
+    const sessionId = getOrCreateSessionId()
+    const anonymousId = getOrCreateAnonymousId()
+    const userId = sessionStorage.getItem('funnel_user_id') ?? undefined
+    apiTrackEvent({ step: 'quiz_cta_click', session_id: sessionId, anonymous_id: anonymousId, user_id: userId, ...utm })
+  }
+
   const handleContinue = () => {
+    trackCta()
     sessionStorage.setItem('funnel_quiz_started', '1')
     router.push('/email')
   }
@@ -45,6 +54,7 @@ const QuizStart = () => {
   }
 
   const handleGoToEmail = () => {
+    trackCta()
     sessionStorage.setItem('funnel_quiz_started', '1')
     router.push('/email')
   }

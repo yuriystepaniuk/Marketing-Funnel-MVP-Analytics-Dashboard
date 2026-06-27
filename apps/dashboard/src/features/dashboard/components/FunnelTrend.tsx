@@ -15,7 +15,9 @@ const FunnelTrend = ({ data }: FunnelTrendProps) => {
   const chartData = useMemo(() => {
     const days = [...new Set(data.map((d) => d.day))].sort()
     return days.map((day) => {
-      const point: Record<string, string | number> = { day: day.slice(5) }
+      // 'YYYY-MM-DD' → 'MM-DD', 'YYYY-MM-DD HH:MM' → 'DD HH:MM'
+      const label = day.includes(' ') ? day.slice(8) : day.slice(5)
+      const point: Record<string, string | number> = { day: label }
       for (const step of STEPS) {
         const found = data.find((d) => d.day === day && d.step === step)
         point[step] = found?.cnt ?? 0

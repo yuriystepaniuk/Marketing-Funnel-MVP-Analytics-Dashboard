@@ -42,25 +42,32 @@ drop policy if exists "allow_all_events" on public.events;
 create policy "allow_all_users" on public.users for all using (true) with check (true);
 create policy "allow_all_events" on public.events for all using (true) with check (true);
 
+-- Add quiz_cta_click to allowed step values
+alter table public.events drop constraint if exists events_step_check;
+alter table public.events add constraint events_step_check
+  check (step in ('quiz_start', 'quiz_cta_click', 'email_view', 'paywall_view', 'buy_click'));
+
 -- Funnel counts: deduped by user_id (post-email) or session_id (anonymous)
-create or replace function get_funnel_counts(p_source text default null)
+create or replace function get_funnel_counts(p_source text default null, p_from timestamptz default null)
 returns json language sql security definer as $$
   select coalesce(json_object_agg(step, cnt), '{}'::json) from (
     select step, count(distinct coalesce(user_id::text, session_id)) as cnt
     from public.events
-    where p_source is null or source = p_source
+    where (p_source is null or source = p_source)
+      and (p_from is null or created_at >= p_from)
     group by step
   ) t;
 $$;
 
 -- Source breakdown: first-touch source per session, grouped by (source, step)
-create or replace function get_source_breakdown()
+create or replace function get_source_breakdown(p_from timestamptz default null)
 returns json language sql security definer as $$
   with first_source as (
     select distinct on (coalesce(user_id::text, session_id))
       coalesce(user_id::text, session_id) as key,
       source
     from public.events
+    where p_from is null or created_at >= p_from
     order by coalesce(user_id::text, session_id), created_at
   ),
   counts as (
@@ -70,6 +77,7 @@ returns json language sql security definer as $$
       count(distinct coalesce(e.user_id::text, e.session_id)) as cnt
     from public.events e
     join first_source fs on coalesce(e.user_id::text, e.session_id) = fs.key
+    where p_from is null or e.created_at >= p_from
     group by fs.source, e.step
   )
   select coalesce(json_object_agg(source, steps), '{}'::json) from (
@@ -79,23 +87,31 @@ returns json language sql security definer as $$
   ) t;
 $$;
 
--- Daily funnel counts per step (for trend chart)
-create or replace function get_funnel_by_day(p_days_back int default 30, p_source text default null)
+-- Daily/hourly funnel counts per step (for trend chart)
+create or replace function get_funnel_by_day(p_days_back int default 30, p_source text default null, p_from timestamptz default null, p_group_by text default 'day')
 returns json language sql security definer as $$
   select coalesce(json_agg(row_to_json(t) order by t.day, t.step), '[]'::json) from (
     select
-      to_char(date_trunc('day', created_at), 'YYYY-MM-DD') as day,
+      case
+        when p_group_by = 'hour' then to_char(date_trunc('hour', created_at), 'YYYY-MM-DD HH24:MI')
+        else to_char(date_trunc('day', created_at), 'YYYY-MM-DD')
+      end as day,
       step,
       count(distinct coalesce(user_id::text, session_id)) as cnt
     from public.events
-    where created_at >= now() - (p_days_back || ' days')::interval
-      and (p_source is null or source = p_source)
-    group by date_trunc('day', created_at), step
+    where (
+      case when p_from is not null
+        then created_at >= p_from
+        else created_at >= now() - (p_days_back || ' days')::interval
+      end
+    )
+    and (p_source is null or source = p_source)
+    group by 1, step
   ) t;
 $$;
 
 -- Time-to-convert stats: first event → buy_click per converting session
-create or replace function get_funnel_time_stats(p_source text default null)
+create or replace function get_funnel_time_stats(p_source text default null, p_from timestamptz default null)
 returns json language sql security definer as $$
   with converter_times as (
     select
@@ -103,7 +119,8 @@ returns json language sql security definer as $$
       min(created_at) as first_event,
       max(case when step = 'buy_click' then created_at end) as buy_time
     from public.events
-    where p_source is null or source = p_source
+    where (p_source is null or source = p_source)
+      and (p_from is null or created_at >= p_from)
     group by coalesce(user_id::text, session_id)
     having max(case when step = 'buy_click' then created_at end) is not null
        and min(created_at) < max(case when step = 'buy_click' then created_at end)

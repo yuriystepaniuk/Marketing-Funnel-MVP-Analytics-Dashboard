@@ -10,10 +10,13 @@ export interface AuthCredentials {
   password: string
 }
 
+export type DateRange = '1h' | '24h' | '7d' | '30d' | 'all'
+
 export interface FetchDashboardArgs {
   token: string
   page?: number
   source?: string | null
+  dateRange?: DateRange
 }
 
 export async function apiAuthDashboard({ username, password }: AuthCredentials): Promise<string> {
@@ -24,9 +27,10 @@ export async function apiAuthDashboard({ username, password }: AuthCredentials):
   return data.token
 }
 
-export async function apiFetchDashboard({ token, page = 1, source }: FetchDashboardArgs): Promise<DashboardData> {
+export async function apiFetchDashboard({ token, page = 1, source, dateRange = 'all' }: FetchDashboardArgs): Promise<DashboardData> {
   const params = new URLSearchParams({ page: String(page) })
   if (source) params.set('source', source)
+  if (dateRange !== 'all') params.set('dateRange', dateRange)
   const res = await fetch(`/api/dashboard?${params}`, {
     headers: { Authorization: `Bearer ${token}` },
   })

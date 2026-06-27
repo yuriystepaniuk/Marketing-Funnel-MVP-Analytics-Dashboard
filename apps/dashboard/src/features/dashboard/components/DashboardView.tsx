@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useDashboardData } from '@/hooks/useDashboardData'
+import type { DateRange } from '@/lib/api'
 import Sidebar from './Sidebar'
 import FunnelOverview from './FunnelOverview'
 import ConversionRates from './ConversionRates'
@@ -16,33 +17,60 @@ interface DashboardViewProps {
   onLogout: () => void
 }
 
+const DATE_RANGES: { label: string; value: DateRange }[] = [
+  { label: '1H',      value: '1h' },
+  { label: 'Today',   value: '24h' },
+  { label: '7D',      value: '7d' },
+  { label: '30D',     value: '30d' },
+  { label: 'All time', value: 'all' },
+]
+
 const DashboardView = ({ token, onLogout }: DashboardViewProps) => {
   const [activeTab, setActiveTab] = useState('overview')
   const [source, setSource] = useState<string | null>(null)
-  const { data, loading, fetchError, maxCount, allAttribution, hasMore, loadMore, refresh } = useDashboardData(token, onLogout, source)
+  const [dateRange, setDateRange] = useState<DateRange>('all')
+  const { data, loading, fetchError, maxCount, allAttribution, hasMore, loadMore, refresh } =
+    useDashboardData(token, onLogout, source, dateRange)
 
   const availableSources = data ? Object.keys(data.source_breakdown) : []
 
-  const sourceFilter = availableSources.length > 0 && (
-    <div className="flex items-center gap-2 mb-6">
-      <span className="text-sm text-gray-400">Filter by source:</span>
-      <select
-        value={source ?? ''}
-        onChange={(e) => setSource(e.target.value || null)}
-        className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-      >
-        <option value="">All Sources</option>
-        {availableSources.map((s) => (
-          <option key={s} value={s} className="capitalize">{s}</option>
+  const filterBar = (
+    <div className="flex flex-wrap items-center gap-3 mb-6">
+      <div className="flex gap-1">
+        {DATE_RANGES.map(({ label, value }) => (
+          <button
+            key={value}
+            onClick={() => setDateRange(value)}
+            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+              dateRange === value
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            {label}
+          </button>
         ))}
-      </select>
-      {source && (
-        <button
-          onClick={() => setSource(null)}
-          className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
-        >
-          Clear
-        </button>
+      </div>
+
+      {availableSources.length > 0 && (
+        <div className="flex items-center gap-2 ml-2">
+          <span className="text-xs text-gray-400">Source:</span>
+          <select
+            value={source ?? ''}
+            onChange={(e) => setSource(e.target.value || null)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          >
+            <option value="">All</option>
+            {availableSources.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          {source && (
+            <button onClick={() => setSource(null)} className="text-xs text-gray-400 hover:text-gray-600 underline">
+              Clear
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
@@ -60,12 +88,7 @@ const DashboardView = ({ token, onLogout }: DashboardViewProps) => {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <div className="hidden md:flex">
-        <Sidebar
-          active={activeTab}
-          onSelect={setActiveTab}
-          onRefresh={refresh}
-          onLogout={onLogout}
-        />
+        <Sidebar active={activeTab} onSelect={setActiveTab} onRefresh={refresh} onLogout={onLogout} />
       </div>
 
       <div className="flex-1 min-w-0">
@@ -78,7 +101,7 @@ const DashboardView = ({ token, onLogout }: DashboardViewProps) => {
 
           {data && (
             <div className={`transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}>
-              {sourceFilter}
+              {filterBar}
 
               {activeTab === 'overview' && (
                 <div className="space-y-6">

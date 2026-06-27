@@ -7,6 +7,16 @@ import { verifyToken } from '@/lib/token'
 const PAGE_SIZE = 50
 const FALLBACK_ID = '00000000-0000-0000-0000-000000000000'
 
+function getFromDate(range: string): string | null {
+  const ms: Record<string, number> = {
+    '1h':  1 * 60 * 60 * 1000,
+    '24h': 24 * 60 * 60 * 1000,
+    '7d':  7 * 24 * 60 * 60 * 1000,
+    '30d': 30 * 24 * 60 * 60 * 1000,
+  }
+  return ms[range] ? new Date(Date.now() - ms[range]).toISOString() : null
+}
+
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req)
   if (!rateLimit(ip, 30, 60_000)) {
@@ -23,6 +33,9 @@ export async function GET(req: NextRequest) {
 
   const page = Math.max(1, Number(req.nextUrl.searchParams.get('page') ?? '1'))
   const source = req.nextUrl.searchParams.get('source') || null
+  const dateRange = req.nextUrl.searchParams.get('dateRange') ?? 'all'
+  const fromDate = getFromDate(dateRange)
+  const groupBy = ['1h', '24h'].includes(dateRange) ? 'hour' : 'day'
   const from = (page - 1) * PAGE_SIZE
 
   const usersQuery = supabaseServer
@@ -32,6 +45,7 @@ export async function GET(req: NextRequest) {
     .range(from, from + PAGE_SIZE - 1)
 
   if (source) usersQuery.eq('first_touch_source', source)
+  if (fromDate) usersQuery.gte('created_at', fromDate)
 
   const [
     { data: funnelData },
@@ -40,10 +54,10 @@ export async function GET(req: NextRequest) {
     { data: timeData },
     { data: users, count: totalUsers },
   ] = await Promise.all([
-    supabaseServer.rpc('get_funnel_counts', { p_source: source }),
-    supabaseServer.rpc('get_source_breakdown'),
-    supabaseServer.rpc('get_funnel_by_day', { p_days_back: 30, p_source: source }),
-    supabaseServer.rpc('get_funnel_time_stats', { p_source: source }),
+    supabaseServer.rpc('get_funnel_counts', { p_source: source, p_from: fromDate }),
+    supabaseServer.rpc('get_source_breakdown', { p_from: fromDate }),
+    supabaseServer.rpc('get_funnel_by_day', { p_source: source, p_from: fromDate, p_group_by: groupBy }),
+    supabaseServer.rpc('get_funnel_time_stats', { p_source: source, p_from: fromDate }),
     usersQuery,
   ])
 
