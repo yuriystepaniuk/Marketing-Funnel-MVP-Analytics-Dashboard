@@ -47,21 +47,33 @@ alter table public.events drop constraint if exists events_step_check;
 alter table public.events add constraint events_step_check
   check (step in ('quiz_start', 'quiz_cta_click', 'email_view', 'email_submit', 'paywall_view', 'buy_click', 'product_view'));
 
--- Funnel counts: cohort-based — only count steps for sessions that had quiz_start in the time window
--- This prevents email_view > quiz_start (e.g. 300%) when filtering by short time ranges
+-- Funnel counts: cohort-based
+-- quiz_start uses session_id (user_id is null), buy_click uses user_id — different keys for same person.
+-- We bridge: find session_ids from quiz_start window → then find all user_ids from those sessions.
 create or replace function get_funnel_counts(p_source text default null, p_from timestamptz default null)
 returns json language sql security definer as $$
-  with starters as (
-    select distinct coalesce(user_id::text, session_id) as key
+  with quiz_sessions as (
+    select distinct session_id
     from public.events
     where step = 'quiz_start'
       and (p_source is null or source = p_source)
       and (p_from is null or created_at >= p_from)
+  ),
+  session_users as (
+    select distinct e.user_id::text as key
+    from public.events e
+    inner join quiz_sessions qs on e.session_id = qs.session_id
+    where e.user_id is not null
+  ),
+  starter_keys as (
+    select session_id as key from quiz_sessions
+    union all
+    select key from session_users
   )
   select coalesce(json_object_agg(step, cnt), '{}'::json) from (
     select e.step, count(distinct coalesce(e.user_id::text, e.session_id)) as cnt
     from public.events e
-    inner join starters s on coalesce(e.user_id::text, e.session_id) = s.key
+    where coalesce(e.user_id::text, e.session_id) in (select key from starter_keys)
     group by e.step
   ) t;
 $$;
