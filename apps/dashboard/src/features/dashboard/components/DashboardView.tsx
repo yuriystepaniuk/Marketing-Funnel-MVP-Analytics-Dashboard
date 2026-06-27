@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import type { DateRange } from '@/lib/api'
 import Sidebar from './Sidebar'
@@ -35,6 +35,11 @@ const DashboardView = ({ token, onLogout }: DashboardViewProps) => {
     useDashboardData(token, onLogout, source, dateRange)
 
   const availableSources = data ? Object.keys(data.source_breakdown) : []
+
+  // Auto-clear source filter when switching date range leaves current source with no data
+  useEffect(() => {
+    if (source && data && !availableSources.includes(source)) setSource(null)
+  }, [availableSources, source, data])
 
   const filterBar = (
     <div className="flex flex-wrap items-center gap-3 mb-6">
