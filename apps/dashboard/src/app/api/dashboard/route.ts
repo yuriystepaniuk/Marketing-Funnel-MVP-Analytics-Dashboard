@@ -73,7 +73,8 @@ export async function GET(req: NextRequest) {
     { data: lastEvents },
     { data: buyEvents },
     { data: firstEvents },
-    { data: productViews },
+    { data: productFirstViews },
+    { data: productLastActivity },
   ] = await Promise.all([
     supabaseServer
       .from('events')
@@ -91,11 +92,20 @@ export async function GET(req: NextRequest) {
       .select('user_id, created_at')
       .in('user_id', ids)
       .order('created_at', { ascending: true }),
+    // first product_view per user (page entry time)
     supabaseServer
       .from('events')
-      .select('user_id')
+      .select('user_id, created_at')
       .in('user_id', ids)
-      .eq('step', 'product_view'),
+      .eq('step', 'product_view')
+      .order('created_at', { ascending: true }),
+    // latest product_view/ping/exit per user (page exit time)
+    supabaseServer
+      .from('events')
+      .select('user_id, created_at')
+      .in('user_id', ids)
+      .in('step', ['product_view', 'product_ping', 'product_exit'])
+      .order('created_at', { ascending: false }),
   ])
 
   const lastTouchMap: Record<string, { source: string; created_at: string }> = {}
@@ -120,14 +130,32 @@ export async function GET(req: NextRequest) {
   }
 
   const purchasedUserIds = new Set((buyEvents ?? []).map((e) => e.user_id))
-  const productVisitedIds = new Set((productViews ?? []).map((e) => e.user_id))
+
+  const productViewMap: Record<string, string> = {}
+  for (const evt of productFirstViews ?? []) {
+    if (evt.user_id && !productViewMap[evt.user_id]) productViewMap[evt.user_id] = evt.created_at
+  }
+
+  const productLastMap: Record<string, string> = {}
+  for (const evt of productLastActivity ?? []) {
+    if (evt.user_id && !productLastMap[evt.user_id]) productLastMap[evt.user_id] = evt.created_at
+  }
 
   const attribution = (users ?? []).map((u) => {
     const firstAt = firstEventMap[u.id]
     const buyAt = buyTimeMap[u.id]
-    const funnel_minutes =
+    const funnel_seconds =
       firstAt && buyAt
-        ? Math.max(0, Math.round((new Date(buyAt).getTime() - new Date(firstAt).getTime()) / 60000))
+        ? Math.max(0, Math.round((new Date(buyAt).getTime() - new Date(firstAt).getTime()) / 1000))
+        : null
+
+    const pViewAt = productViewMap[u.id]
+    const pLastAt = productLastMap[u.id]
+    const product_seconds =
+      pViewAt
+        ? pLastAt && pLastAt !== pViewAt
+          ? Math.max(0, Math.round((new Date(pLastAt).getTime() - new Date(pViewAt).getTime()) / 1000))
+          : 0
         : null
 
     return {
@@ -139,8 +167,8 @@ export async function GET(req: NextRequest) {
       created_at: u.created_at,
       last_seen_at: lastTouchMap[u.id]?.created_at ?? null,
       purchased: purchasedUserIds.has(u.id),
-      funnel_minutes,
-      product_visited: productVisitedIds.has(u.id),
+      funnel_seconds,
+      product_seconds,
     }
   })
 

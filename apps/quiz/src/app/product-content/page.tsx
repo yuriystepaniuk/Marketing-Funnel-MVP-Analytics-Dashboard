@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
-import { apiTrackEvent } from '@/lib/api'
+import { apiTrackEvent, apiTrackBeacon } from '@/lib/api'
 import { getOrCreateAnonymousId, getOrCreateSessionId, loadUtm } from '@/lib/funnel'
+
+const PING_INTERVAL_MS = 30_000
 
 const ProductContentPage = () => {
   useEffect(() => {
@@ -10,7 +12,25 @@ const ProductContentPage = () => {
     const anonymousId = getOrCreateAnonymousId()
     const sessionId = getOrCreateSessionId()
     const utm = loadUtm()
-    apiTrackEvent({ step: 'product_view', session_id: sessionId, anonymous_id: anonymousId, user_id: userId, ...utm })
+    const base = { session_id: sessionId, anonymous_id: anonymousId, user_id: userId, ...utm }
+
+    apiTrackEvent({ step: 'product_view', ...base })
+
+    const pingId = setInterval(() => {
+      apiTrackEvent({ step: 'product_ping', ...base })
+    }, PING_INTERVAL_MS)
+
+    const handleHide = () => {
+      if (document.visibilityState === 'hidden') {
+        apiTrackBeacon({ step: 'product_exit', ...base })
+      }
+    }
+    document.addEventListener('visibilitychange', handleHide)
+
+    return () => {
+      clearInterval(pingId)
+      document.removeEventListener('visibilitychange', handleHide)
+    }
   }, [])
 
   return (

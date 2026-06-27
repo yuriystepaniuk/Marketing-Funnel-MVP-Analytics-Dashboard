@@ -1,4 +1,4 @@
-export const FUNNEL_STEPS = ['quiz_start', 'quiz_cta_click', 'email_view', 'email_submit', 'paywall_view', 'buy_click', 'product_view'] as const
+export const FUNNEL_STEPS = ['quiz_start', 'quiz_cta_click', 'email_view', 'email_submit', 'paywall_view', 'buy_click', 'product_view', 'product_ping', 'product_exit'] as const
 export type FunnelStep = (typeof FUNNEL_STEPS)[number]
 
 export const PAYWALL_FEATURES = [

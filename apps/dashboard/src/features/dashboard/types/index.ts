@@ -18,8 +18,8 @@ export interface AttributionRow {
   created_at: string
   last_seen_at: string | null
   purchased: boolean
-  funnel_minutes: number | null
-  product_visited: boolean
+  funnel_seconds: number | null
+  product_seconds: number | null
 }
 
 export interface DailyCount {

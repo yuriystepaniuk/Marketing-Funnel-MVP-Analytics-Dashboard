@@ -11,6 +11,19 @@ interface AttributionTableProps {
   loading: boolean
 }
 
+const fmtTime = (seconds: number | null): string => {
+  if (seconds === null) return '—'
+  if (seconds < 60) return `${seconds}s`
+  if (seconds < 3600) {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return s > 0 ? `${m}m ${s}s` : `${m}m`
+  }
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  return m > 0 ? `${h}h ${m}m` : `${h}h`
+}
+
 const AttributionTable = ({ attribution, total, hasMore, onLoadMore, loading }: AttributionTableProps) => {
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -38,7 +51,7 @@ const AttributionTable = ({ attribution, total, hasMore, onLoadMore, loading }: 
               <th className="pb-3 pr-4 font-medium">Email</th>
               <th className="pb-3 pr-4 font-medium">Purchased</th>
               <th className="pb-3 pr-4 font-medium">Funnel Time</th>
-              <th className="pb-3 pr-4 font-medium">Product</th>
+              <th className="pb-3 pr-4 font-medium">Product Time</th>
               <th className="pb-3 pr-4 font-medium">First Touch</th>
               <th className="pb-3 pr-4 font-medium">Last Touch</th>
               <th className="pb-3 pr-4 font-medium">Campaign</th>
@@ -57,15 +70,11 @@ const AttributionTable = ({ attribution, total, hasMore, onLoadMore, loading }: 
                   }
                 </td>
                 <td className="py-3 pr-4 text-gray-500 text-xs whitespace-nowrap">
-                  {row.funnel_minutes !== null
-                    ? row.funnel_minutes < 60
-                      ? `${row.funnel_minutes}m`
-                      : `${Math.floor(row.funnel_minutes / 60)}h ${row.funnel_minutes % 60}m`
-                    : '—'}
+                  {fmtTime(row.funnel_seconds)}
                 </td>
-                <td className="py-3 pr-4">
-                  {row.product_visited
-                    ? <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">Visited</span>
+                <td className="py-3 pr-4 text-gray-500 text-xs whitespace-nowrap">
+                  {row.product_seconds !== null
+                    ? <span className="bg-indigo-50 text-indigo-700 text-xs px-2 py-1 rounded-full">{fmtTime(row.product_seconds)}</span>
                     : <span className="text-gray-300 text-xs">—</span>
                   }
                 </td>
