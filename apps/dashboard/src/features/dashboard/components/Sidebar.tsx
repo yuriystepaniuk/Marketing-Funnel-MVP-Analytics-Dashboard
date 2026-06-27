@@ -9,6 +9,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'funnel',      label: 'Funnel',      icon: '↓' },
   { id: 'conversions', label: 'Conversions', icon: '%' },
   { id: 'sources',     label: 'Sources',     icon: '◉' },
+  { id: 'trends',      label: 'Trends',      icon: '↗' },
+  { id: 'timing',      label: 'Timing',      icon: '⏱' },
   { id: 'attribution', label: 'Attribution', icon: '☰' },
 ]
 

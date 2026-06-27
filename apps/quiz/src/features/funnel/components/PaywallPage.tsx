@@ -42,6 +42,7 @@ const PaywallPage = () => {
     const userId = sessionStorage.getItem('funnel_user_id') ?? undefined
     await trackBuy({ step: 'buy_click', session_id: sessionId, anonymous_id: anonymousId, user_id: userId, ...utm })
     clearFunnelProgress()
+    sessionStorage.setItem('funnel_purchase_type', 'new')
     router.push('/product')
   }
 

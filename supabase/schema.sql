@@ -43,11 +43,12 @@ create policy "allow_all_users" on public.users for all using (true) with check 
 create policy "allow_all_events" on public.events for all using (true) with check (true);
 
 -- Funnel counts: deduped by user_id (post-email) or session_id (anonymous)
-create or replace function get_funnel_counts()
+create or replace function get_funnel_counts(p_source text default null)
 returns json language sql security definer as $$
   select coalesce(json_object_agg(step, cnt), '{}'::json) from (
     select step, count(distinct coalesce(user_id::text, session_id)) as cnt
     from public.events
+    where p_source is null or source = p_source
     group by step
   ) t;
 $$;
@@ -76,4 +77,47 @@ returns json language sql security definer as $$
     from counts
     group by source
   ) t;
+$$;
+
+-- Daily funnel counts per step (for trend chart)
+create or replace function get_funnel_by_day(p_days_back int default 30, p_source text default null)
+returns json language sql security definer as $$
+  select coalesce(json_agg(row_to_json(t) order by t.day, t.step), '[]'::json) from (
+    select
+      to_char(date_trunc('day', created_at), 'YYYY-MM-DD') as day,
+      step,
+      count(distinct coalesce(user_id::text, session_id)) as cnt
+    from public.events
+    where created_at >= now() - (p_days_back || ' days')::interval
+      and (p_source is null or source = p_source)
+    group by date_trunc('day', created_at), step
+  ) t;
+$$;
+
+-- Time-to-convert stats: first event → buy_click per converting session
+create or replace function get_funnel_time_stats(p_source text default null)
+returns json language sql security definer as $$
+  with converter_times as (
+    select
+      coalesce(user_id::text, session_id) as key,
+      min(created_at) as first_event,
+      max(case when step = 'buy_click' then created_at end) as buy_time
+    from public.events
+    where p_source is null or source = p_source
+    group by coalesce(user_id::text, session_id)
+    having max(case when step = 'buy_click' then created_at end) is not null
+       and min(created_at) < max(case when step = 'buy_click' then created_at end)
+  ),
+  durations as (
+    select extract(epoch from (buy_time - first_event)) / 60.0 as minutes
+    from converter_times
+  )
+  select case when count(*) = 0 then null else json_build_object(
+    'avg_minutes',    round(avg(minutes)::numeric, 1),
+    'median_minutes', round(percentile_cont(0.5) within group (order by minutes)::numeric, 1),
+    'min_minutes',    round(min(minutes)::numeric, 1),
+    'max_minutes',    round(max(minutes)::numeric, 1),
+    'total_converters', count(*)
+  ) end
+  from durations;
 $$;

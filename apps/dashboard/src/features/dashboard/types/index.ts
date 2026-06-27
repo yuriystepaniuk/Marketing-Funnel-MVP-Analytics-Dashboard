@@ -20,10 +20,26 @@ export interface AttributionRow {
   purchased: boolean
 }
 
+export interface DailyCount {
+  day: string
+  step: string
+  cnt: number
+}
+
+export interface TimeStats {
+  avg_minutes: number
+  median_minutes: number
+  min_minutes: number
+  max_minutes: number
+  total_converters: number
+}
+
 export interface DashboardData {
   funnel: FunnelCounts
   conversions: ConversionRates
   source_breakdown: SourceBreakdown
   attribution: AttributionRow[]
   pagination: Pagination
+  funnel_by_day: DailyCount[]
+  time_stats: TimeStats | null
 }

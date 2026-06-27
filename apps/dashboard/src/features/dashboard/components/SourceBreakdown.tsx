@@ -30,23 +30,30 @@ const SourceBreakdown = ({ source_breakdown }: SourceBreakdownProps) => {
                   {STEPS.map((s) => (
                     <th key={s} className="pb-2 font-medium text-center">{shortStepLabel(s)}</th>
                   ))}
+                  <th className="pb-2 font-medium text-center text-green-600">CR</th>
                 </tr>
               </thead>
               <tbody>
-                {sources.map((source, i) => (
-                  <tr key={source} className="border-b border-gray-50">
-                    <td className="py-2 pr-3 font-medium capitalize flex items-center gap-2">
-                      <span
-                        className="w-2 h-2 rounded-full inline-block shrink-0"
-                        style={{ backgroundColor: SOURCE_COLORS[i % SOURCE_COLORS.length] }}
-                      />
-                      {source}
-                    </td>
-                    {STEPS.map((s) => (
-                      <td key={s} className="py-2 text-center text-gray-600">{sourceStepCount(source_breakdown, source, s)}</td>
-                    ))}
-                  </tr>
-                ))}
+                {sources.map((source, i) => {
+                  const quizCount = sourceStepCount(source_breakdown, source, 'quiz_start')
+                  const buyCount = sourceStepCount(source_breakdown, source, 'buy_click')
+                  const cr = quizCount > 0 ? ((buyCount / quizCount) * 100).toFixed(1) + '%' : '—'
+                  return (
+                    <tr key={source} className="border-b border-gray-50">
+                      <td className="py-2 pr-3 font-medium capitalize flex items-center gap-2">
+                        <span
+                          className="w-2 h-2 rounded-full inline-block shrink-0"
+                          style={{ backgroundColor: SOURCE_COLORS[i % SOURCE_COLORS.length] }}
+                        />
+                        {source}
+                      </td>
+                      {STEPS.map((s) => (
+                        <td key={s} className="py-2 text-center text-gray-600">{sourceStepCount(source_breakdown, source, s)}</td>
+                      ))}
+                      <td className="py-2 text-center font-semibold text-green-600">{cr}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

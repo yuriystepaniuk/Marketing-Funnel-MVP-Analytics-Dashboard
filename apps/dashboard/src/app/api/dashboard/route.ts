@@ -22,24 +22,35 @@ export async function GET(req: NextRequest) {
   }
 
   const page = Math.max(1, Number(req.nextUrl.searchParams.get('page') ?? '1'))
+  const source = req.nextUrl.searchParams.get('source') || null
   const from = (page - 1) * PAGE_SIZE
+
+  const usersQuery = supabaseServer
+    .from('users')
+    .select('id, email, first_touch_source, first_touch_utm_campaign, created_at', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, from + PAGE_SIZE - 1)
+
+  if (source) usersQuery.eq('first_touch_source', source)
 
   const [
     { data: funnelData },
     { data: sourceData },
+    { data: dailyData },
+    { data: timeData },
     { data: users, count: totalUsers },
   ] = await Promise.all([
-    supabaseServer.rpc('get_funnel_counts'),
+    supabaseServer.rpc('get_funnel_counts', { p_source: source }),
     supabaseServer.rpc('get_source_breakdown'),
-    supabaseServer
-      .from('users')
-      .select('id, email, first_touch_source, first_touch_utm_campaign, created_at', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, from + PAGE_SIZE - 1),
+    supabaseServer.rpc('get_funnel_by_day', { p_days_back: 30, p_source: source }),
+    supabaseServer.rpc('get_funnel_time_stats', { p_source: source }),
+    usersQuery,
   ])
 
   const counts = (funnelData as Record<string, number> | null) ?? {}
   const sourceBreakdown = (sourceData as Record<string, Record<string, number>> | null) ?? {}
+  const funnelByDay = Array.isArray(dailyData) ? dailyData : []
+  const timeStats = timeData ?? null
 
   const userIds = (users ?? []).map((u) => u.id)
   const ids = userIds.length > 0 ? userIds : [FALLBACK_ID]
@@ -94,6 +105,8 @@ export async function GET(req: NextRequest) {
         : '0',
     },
     source_breakdown: sourceBreakdown,
+    funnel_by_day: funnelByDay,
+    time_stats: timeStats,
     attribution,
     pagination: {
       page,

@@ -30,6 +30,7 @@ export const useEmailCapture = () => {
     sessionStorage.setItem('funnel_user_email', email.toLowerCase().trim())
 
     if (result.purchased) {
+      sessionStorage.setItem('funnel_purchase_type', 'returning')
       router.push('/product')
     } else {
       router.push(result.isNew === false ? '/paywall?resumed=true' : '/paywall')

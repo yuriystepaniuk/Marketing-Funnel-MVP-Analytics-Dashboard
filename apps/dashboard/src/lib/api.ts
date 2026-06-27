@@ -13,6 +13,7 @@ export interface AuthCredentials {
 export interface FetchDashboardArgs {
   token: string
   page?: number
+  source?: string | null
 }
 
 export async function apiAuthDashboard({ username, password }: AuthCredentials): Promise<string> {
@@ -23,8 +24,10 @@ export async function apiAuthDashboard({ username, password }: AuthCredentials):
   return data.token
 }
 
-export async function apiFetchDashboard({ token, page = 1 }: FetchDashboardArgs): Promise<DashboardData> {
-  const res = await fetch(`/api/dashboard?page=${page}`, {
+export async function apiFetchDashboard({ token, page = 1, source }: FetchDashboardArgs): Promise<DashboardData> {
+  const params = new URLSearchParams({ page: String(page) })
+  if (source) params.set('source', source)
+  const res = await fetch(`/api/dashboard?${params}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (res.status === HttpStatus.UNAUTHORIZED) throw new Error(DashboardError.UNAUTHORIZED)
