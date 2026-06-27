@@ -48,11 +48,17 @@ const FunnelOverview = ({ funnel }: FunnelOverviewProps) => {
     return transitions.reduce((a, b) => (b.pct > a.pct ? b : a), transitions[0])
   }, [funnel])
 
+  const isEmpty = STEPS.every((s) => !funnel[s])
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 pt-6 px-6 overflow-hidden flex flex-col">
       <h2 className="text-lg font-semibold text-gray-800 mb-4">Funnel Overview</h2>
 
-      {worstDrop && worstDrop.pct > 0 && (
+      {isEmpty && (
+        <p className="text-gray-400 text-sm text-center py-6">No data for this period</p>
+      )}
+
+      {!isEmpty && worstDrop && worstDrop.pct > 0 && (
         <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 text-sm">
           <span className="text-red-500 text-base">⚠</span>
           <span className="text-gray-600">Biggest drop-off:</span>
@@ -62,31 +68,35 @@ const FunnelOverview = ({ funnel }: FunnelOverviewProps) => {
         </div>
       )}
 
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-6">
-        {STEPS.map((step, i) => (
-          <div
-            key={step}
-            className="rounded-xl p-3 text-center"
-            style={{ backgroundColor: `color-mix(in srgb, ${FUNNEL_COLORS[i]} 12%, white)` }}
-          >
-            <p className="text-2xl font-bold" style={{ color: FUNNEL_COLORS[i] }}>{funnel[step] ?? 0}</p>
-            <p className="text-xs text-gray-500 mt-1 leading-tight">{STEP_LABELS[step]}</p>
+      {!isEmpty && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
+            {STEPS.map((step, i) => (
+              <div
+                key={step}
+                className="rounded-xl p-3 text-center"
+                style={{ backgroundColor: `color-mix(in srgb, ${FUNNEL_COLORS[i]} 12%, white)` }}
+              >
+                <p className="text-2xl font-bold" style={{ color: FUNNEL_COLORS[i] }}>{funnel[step] ?? 0}</p>
+                <p className="text-xs text-gray-500 mt-1 leading-tight">{STEP_LABELS[step]}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <ResponsiveContainer width="100%" height={160}>
-        <BarChart data={chartData} barCategoryGap="20%" margin={{ top: 0, right: 4, left: -20, bottom: 0 }}>
-          <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-          <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
-          <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(value) => [value, 'Users']} />
-          <Bar dataKey="count" shape={BarShape} />
-        </BarChart>
-      </ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={chartData} barCategoryGap="20%" margin={{ top: 0, right: 4, left: -20, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(value) => [value, 'Users']} />
+              <Bar dataKey="count" shape={BarShape} />
+            </BarChart>
+          </ResponsiveContainer>
 
-      <div className="mt-4">
-        <FunnelSvgChart funnel={funnel} />
-      </div>
+          <div className="mt-4">
+            <FunnelSvgChart funnel={funnel} />
+          </div>
+        </>
+      )}
     </div>
   )
 }

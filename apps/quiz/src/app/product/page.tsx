@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-
-const PRODUCT_URL = process.env.NEXT_PUBLIC_PRODUCT_URL ?? '/'
+import Link from 'next/link'
 
 const ProductPage = () => {
   const [email] = useState(() =>
@@ -28,12 +27,12 @@ const ProductPage = () => {
         <p className="text-indigo-200 mb-8">
           {isNew ? 'Your purchase was successful. You now have full access.' : 'You already have access to the product.'}
         </p>
-        <a
-          href={PRODUCT_URL}
+        <Link
+          href="/product-content"
           className="inline-block bg-white text-indigo-700 font-bold py-4 px-8 rounded-2xl text-lg hover:bg-indigo-50 transition-all hover:-translate-y-0.5 shadow-lg shadow-indigo-900/30"
         >
           Go to Product →
-        </a>
+        </Link>
       </div>
     </div>
   )

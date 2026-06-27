@@ -1,10 +1,9 @@
-export const STEPS = ['quiz_start', 'email_view', 'email_submit', 'paywall_view', 'buy_click'] as const
+export const STEPS = ['quiz_start', 'email_view', 'paywall_view', 'buy_click'] as const
 export type FunnelStep = (typeof STEPS)[number]
 
 export const STEP_LABELS: Record<string, string> = {
   quiz_start: 'Quiz View',
   email_view: 'Email View',
-  email_submit: 'Email Submit',
   paywall_view: 'Paywall View',
   buy_click: 'Buy Click',
 }
@@ -26,12 +25,11 @@ export const OVERALL_CONVERSION_LABEL = 'Overall Conversion'
 export const FUNNEL_COLORS = [
   'var(--color-indigo-200)',
   'var(--color-indigo-300)',
-  'var(--color-indigo-400)',
   'var(--color-indigo-500)',
-  'var(--color-indigo-600)',
+  'var(--color-indigo-700)',
 ] as const
 
-export const FUNNEL_HEX = ['#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5'] as const
+export const FUNNEL_HEX = ['#c7d2fe', '#a5b4fc', '#6366f1', '#3730a3'] as const
 
 export const SOURCE_COLORS = [
   'var(--color-indigo-500)',

@@ -20,7 +20,14 @@ const DailyOverview = ({ data }: DailyOverviewProps) => {
     })
   }, [data])
 
-  if (chartData.length === 0) return null
+  if (chartData.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-2">Overview</h2>
+        <p className="text-gray-400 text-sm text-center py-8">No data for this period</p>
+      </div>
+    )
+  }
 
   const totalSessions = chartData.reduce((s, d) => s + d.Sessions, 0)
   const totalPurchases = chartData.reduce((s, d) => s + d.Purchases, 0)

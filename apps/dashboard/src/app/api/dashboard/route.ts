@@ -69,7 +69,12 @@ export async function GET(req: NextRequest) {
   const userIds = (users ?? []).map((u) => u.id)
   const ids = userIds.length > 0 ? userIds : [FALLBACK_ID]
 
-  const [{ data: lastEvents }, { data: buyEvents }] = await Promise.all([
+  const [
+    { data: lastEvents },
+    { data: buyEvents },
+    { data: firstEvents },
+    { data: productViews },
+  ] = await Promise.all([
     supabaseServer
       .from('events')
       .select('user_id, source, created_at')
@@ -77,9 +82,20 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false }),
     supabaseServer
       .from('events')
+      .select('user_id, created_at')
+      .in('user_id', ids)
+      .eq('step', 'buy_click')
+      .order('created_at', { ascending: true }),
+    supabaseServer
+      .from('events')
+      .select('user_id, created_at')
+      .in('user_id', ids)
+      .order('created_at', { ascending: true }),
+    supabaseServer
+      .from('events')
       .select('user_id')
       .in('user_id', ids)
-      .eq('step', 'buy_click'),
+      .eq('step', 'product_view'),
   ])
 
   const lastTouchMap: Record<string, { source: string; created_at: string }> = {}
@@ -89,18 +105,44 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const purchasedUserIds = new Set((buyEvents ?? []).map((e) => e.user_id))
+  const buyTimeMap: Record<string, string> = {}
+  for (const evt of buyEvents ?? []) {
+    if (evt.user_id && !buyTimeMap[evt.user_id]) {
+      buyTimeMap[evt.user_id] = evt.created_at
+    }
+  }
 
-  const attribution = (users ?? []).map((u) => ({
-    id: u.id,
-    email: u.email,
-    first_touch: u.first_touch_source ?? 'direct',
-    first_touch_campaign: u.first_touch_utm_campaign,
-    last_touch: lastTouchMap[u.id]?.source ?? u.first_touch_source ?? 'direct',
-    created_at: u.created_at,
-    last_seen_at: lastTouchMap[u.id]?.created_at ?? null,
-    purchased: purchasedUserIds.has(u.id),
-  }))
+  const firstEventMap: Record<string, string> = {}
+  for (const evt of firstEvents ?? []) {
+    if (evt.user_id && !firstEventMap[evt.user_id]) {
+      firstEventMap[evt.user_id] = evt.created_at
+    }
+  }
+
+  const purchasedUserIds = new Set((buyEvents ?? []).map((e) => e.user_id))
+  const productVisitedIds = new Set((productViews ?? []).map((e) => e.user_id))
+
+  const attribution = (users ?? []).map((u) => {
+    const firstAt = firstEventMap[u.id]
+    const buyAt = buyTimeMap[u.id]
+    const funnel_minutes =
+      firstAt && buyAt
+        ? Math.max(0, Math.round((new Date(buyAt).getTime() - new Date(firstAt).getTime()) / 60000))
+        : null
+
+    return {
+      id: u.id,
+      email: u.email,
+      first_touch: u.first_touch_source ?? 'direct',
+      first_touch_campaign: u.first_touch_utm_campaign,
+      last_touch: lastTouchMap[u.id]?.source ?? u.first_touch_source ?? 'direct',
+      created_at: u.created_at,
+      last_seen_at: lastTouchMap[u.id]?.created_at ?? null,
+      purchased: purchasedUserIds.has(u.id),
+      funnel_minutes,
+      product_visited: productVisitedIds.has(u.id),
+    }
+  })
 
   return NextResponse.json({
     funnel: counts,

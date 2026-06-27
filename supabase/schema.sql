@@ -45,7 +45,7 @@ create policy "allow_all_events" on public.events for all using (true) with chec
 -- Add quiz_cta_click to allowed step values
 alter table public.events drop constraint if exists events_step_check;
 alter table public.events add constraint events_step_check
-  check (step in ('quiz_start', 'quiz_cta_click', 'email_view', 'email_submit', 'paywall_view', 'buy_click'));
+  check (step in ('quiz_start', 'quiz_cta_click', 'email_view', 'email_submit', 'paywall_view', 'buy_click', 'product_view'));
 
 -- Funnel counts: deduped by user_id (post-email) or session_id (anonymous)
 create or replace function get_funnel_counts(p_source text default null, p_from timestamptz default null)

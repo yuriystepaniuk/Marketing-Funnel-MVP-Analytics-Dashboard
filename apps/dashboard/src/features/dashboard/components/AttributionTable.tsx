@@ -37,11 +37,13 @@ const AttributionTable = ({ attribution, total, hasMore, onLoadMore, loading }: 
             <tr className="text-left text-gray-500 border-b border-gray-100">
               <th className="pb-3 pr-4 font-medium">Email</th>
               <th className="pb-3 pr-4 font-medium">Purchased</th>
+              <th className="pb-3 pr-4 font-medium">Funnel Time</th>
+              <th className="pb-3 pr-4 font-medium">Product</th>
               <th className="pb-3 pr-4 font-medium">First Touch</th>
               <th className="pb-3 pr-4 font-medium">Last Touch</th>
               <th className="pb-3 pr-4 font-medium">Campaign</th>
-              <th className="pb-3 pr-4 font-medium">First Touch</th>
-              <th className="pb-3 font-medium">Last Touch</th>
+              <th className="pb-3 pr-4 font-medium">Joined</th>
+              <th className="pb-3 font-medium">Last Seen</th>
             </tr>
           </thead>
           <tbody>
@@ -51,6 +53,19 @@ const AttributionTable = ({ attribution, total, hasMore, onLoadMore, loading }: 
                 <td className="py-3 pr-4">
                   {row.purchased
                     ? <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">Purchased</span>
+                    : <span className="text-gray-300 text-xs">—</span>
+                  }
+                </td>
+                <td className="py-3 pr-4 text-gray-500 text-xs whitespace-nowrap">
+                  {row.funnel_minutes !== null
+                    ? row.funnel_minutes < 60
+                      ? `${row.funnel_minutes}m`
+                      : `${Math.floor(row.funnel_minutes / 60)}h ${row.funnel_minutes % 60}m`
+                    : '—'}
+                </td>
+                <td className="py-3 pr-4">
+                  {row.product_visited
+                    ? <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">Visited</span>
                     : <span className="text-gray-300 text-xs">—</span>
                   }
                 </td>
@@ -68,7 +83,7 @@ const AttributionTable = ({ attribution, total, hasMore, onLoadMore, loading }: 
                     {row.last_touch}
                   </span>
                 </td>
-                <td className="py-3 pr-4 text-gray-500">{row.first_touch_campaign ?? '—'}</td>
+                <td className="py-3 pr-4 text-gray-500 text-xs">{row.first_touch_campaign ?? '—'}</td>
                 <td className="py-3 pr-4 text-gray-400 text-xs whitespace-nowrap">
                   {new Date(row.created_at).toLocaleString()}
                 </td>
@@ -78,7 +93,7 @@ const AttributionTable = ({ attribution, total, hasMore, onLoadMore, loading }: 
               </tr>
             ))}
             {attribution.length === 0 && !loading && (
-              <tr><td colSpan={7} className="py-4 text-gray-400 text-center">No users yet</td></tr>
+              <tr><td colSpan={9} className="py-4 text-gray-400 text-center">No users yet</td></tr>
             )}
           </tbody>
         </table>
