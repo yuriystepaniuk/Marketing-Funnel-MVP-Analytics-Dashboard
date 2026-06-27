@@ -55,9 +55,9 @@ const FunnelOverview = ({ funnel }: FunnelOverviewProps) => {
       {worstDrop && worstDrop.pct > 0 && (
         <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5 text-sm">
           <span className="text-red-500 text-base">⚠</span>
-          <span className="text-gray-600">Найбільший відтік:</span>
+          <span className="text-gray-600">Biggest drop-off:</span>
           <span className="font-semibold text-gray-800">{worstDrop.from} → {worstDrop.to}</span>
-          <span className="ml-auto font-bold text-red-600">{worstDrop.pct}% втрачено</span>
+          <span className="ml-auto font-bold text-red-600">{worstDrop.pct}% lost</span>
           <span className="text-gray-400 text-xs">({worstDrop.lost} users)</span>
         </div>
       )}

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { loadUtm, getOrCreateAnonymousId } from '@/lib/funnel'
-import { apiUpsertUser } from '@/lib/api'
+import { loadUtm, getOrCreateAnonymousId, getOrCreateSessionId } from '@/lib/funnel'
+import { apiUpsertUser, apiTrackEvent } from '@/lib/api'
 import { useCrud } from '@/hooks/useCrud'
 import { validateEmail } from '@/features/funnel/helpers'
 
@@ -26,8 +26,12 @@ export const useEmailCapture = () => {
     const result = await upsertUser({ email, anonymous_id: anonymousId, ...utm })
     if (!result) return
 
-    sessionStorage.setItem('funnel_user_id', result.user.id)
+    const sessionId = getOrCreateSessionId()
+    const userId = result.user.id
+    sessionStorage.setItem('funnel_user_id', userId)
     sessionStorage.setItem('funnel_user_email', email.toLowerCase().trim())
+
+    apiTrackEvent({ step: 'email_submit', session_id: sessionId, anonymous_id: anonymousId, user_id: userId, ...utm })
 
     if (result.purchased) {
       sessionStorage.setItem('funnel_purchase_type', 'returning')

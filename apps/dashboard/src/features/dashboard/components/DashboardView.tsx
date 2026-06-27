@@ -10,6 +10,8 @@ import SourceBreakdown from './SourceBreakdown'
 import AttributionTable from './AttributionTable'
 import FunnelTrend from './FunnelTrend'
 import FunnelTimeStats from './FunnelTimeStats'
+import SourceLineChart from './SourceLineChart'
+import DailyOverview from './DailyOverview'
 import Spinner from './Spinner'
 
 interface DashboardViewProps {
@@ -105,6 +107,7 @@ const DashboardView = ({ token, onLogout }: DashboardViewProps) => {
 
               {activeTab === 'overview' && (
                 <div className="space-y-6">
+                  <DailyOverview data={data.funnel_by_day} />
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <FunnelOverview funnel={data.funnel} maxCount={maxCount} />
                     <ConversionRates conversions={data.conversions} />
@@ -116,7 +119,12 @@ const DashboardView = ({ token, onLogout }: DashboardViewProps) => {
 
               {activeTab === 'funnel' && <FunnelOverview funnel={data.funnel} maxCount={maxCount} />}
               {activeTab === 'conversions' && <ConversionRates conversions={data.conversions} />}
-              {activeTab === 'sources' && <SourceBreakdown source_breakdown={data.source_breakdown} />}
+              {activeTab === 'sources' && (
+                <div className="space-y-6">
+                  <SourceLineChart source_breakdown={data.source_breakdown} />
+                  <SourceBreakdown source_breakdown={data.source_breakdown} />
+                </div>
+              )}
 
               {activeTab === 'trends' && (
                 <div className="space-y-6">

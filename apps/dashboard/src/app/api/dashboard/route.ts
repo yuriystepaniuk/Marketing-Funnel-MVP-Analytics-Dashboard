@@ -38,14 +38,14 @@ export async function GET(req: NextRequest) {
   const groupBy = ['1h', '24h'].includes(dateRange) ? 'hour' : 'day'
   const from = (page - 1) * PAGE_SIZE
 
-  const usersQuery = supabaseServer
+  // Build users query — apply filters BEFORE .range() so chaining works
+  let usersQuery = supabaseServer
     .from('users')
     .select('id, email, first_touch_source, first_touch_utm_campaign, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .range(from, from + PAGE_SIZE - 1)
 
-  if (source) usersQuery.eq('first_touch_source', source)
-  if (fromDate) usersQuery.gte('created_at', fromDate)
+  if (source) usersQuery = usersQuery.eq('first_touch_source', source)
+  if (fromDate) usersQuery = usersQuery.gte('created_at', fromDate)
 
   const [
     { data: funnelData },
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     supabaseServer.rpc('get_source_breakdown', { p_from: fromDate }),
     supabaseServer.rpc('get_funnel_by_day', { p_source: source, p_from: fromDate, p_group_by: groupBy }),
     supabaseServer.rpc('get_funnel_time_stats', { p_source: source, p_from: fromDate }),
-    usersQuery,
+    usersQuery.range(from, from + PAGE_SIZE - 1),
   ])
 
   const counts = (funnelData as Record<string, number> | null) ?? {}

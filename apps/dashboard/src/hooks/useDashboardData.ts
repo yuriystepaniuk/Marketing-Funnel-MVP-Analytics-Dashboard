@@ -41,11 +41,16 @@ export const useDashboardData = (
   useEffect(() => {
     if (!token) return
     fetchData({ token, page, source: sourceRef.current, dateRange: dateRangeRef.current }).then((result) => {
-      if (!result) { onSessionExpired(); return }
+      if (!result) return // error is shown via fetchError; don't logout on filter errors
       setAllAttribution((prev) => page === 1 ? result.attribution : [...prev, ...result.attribution])
       setHasMore(page < result.pagination.totalPages)
     })
   }, [token, page, refreshKey, fetchData, onSessionExpired])
+
+  // Only logout on actual 401 — not on filter/network errors
+  useEffect(() => {
+    if (fetchError === DashboardError.UNAUTHORIZED) onSessionExpired()
+  }, [fetchError, onSessionExpired])
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) setPage((p) => p + 1)

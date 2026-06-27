@@ -4,7 +4,7 @@ import { STEPS, STEP_LABELS } from '@/features/dashboard/constants'
 import type { FunnelCounts } from '@/features/dashboard/types'
 
 const COLORS = ['#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5']
-const SEG_W = 170
+const SEG_W = 174
 const GAP = 8
 const H = 200
 const W = STEPS.length * SEG_W + (STEPS.length - 1) * GAP

@@ -1,10 +1,10 @@
-export const STEPS = ['quiz_start', 'quiz_cta_click', 'email_view', 'paywall_view', 'buy_click'] as const
+export const STEPS = ['quiz_start', 'email_view', 'email_submit', 'paywall_view', 'buy_click'] as const
 export type FunnelStep = (typeof STEPS)[number]
 
 export const STEP_LABELS: Record<string, string> = {
   quiz_start: 'Quiz View',
-  quiz_cta_click: 'CTA Click',
   email_view: 'Email View',
+  email_submit: 'Email Submit',
   paywall_view: 'Paywall View',
   buy_click: 'Buy Click',
 }
@@ -31,7 +31,6 @@ export const FUNNEL_COLORS = [
   'var(--color-indigo-600)',
 ] as const
 
-// Hex values for Recharts (SVG attributes don't support CSS variables)
 export const FUNNEL_HEX = ['#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5'] as const
 
 export const SOURCE_COLORS = [
@@ -42,6 +41,8 @@ export const SOURCE_COLORS = [
   'var(--color-violet-500)',
   'var(--color-cyan-500)',
 ] as const
+
+export const SOURCE_HEX = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'] as const
 
 export const CHART_TOOLTIP_STYLE = {
   border: 'none',
